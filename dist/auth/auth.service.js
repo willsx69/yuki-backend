@@ -7,7 +7,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-import { Injectable, UnauthorizedException, ConflictException } from "@nestjs/common";
+import { Injectable, UnauthorizedException, ConflictException, InternalServerErrorException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import * as argon2 from "argon2";
@@ -20,6 +20,10 @@ let AuthService = class AuthService {
         this.prisma = prisma;
         this.jwt = jwt;
         this.config = config;
+        const secret = this.config.get("JWT_SECRET");
+        if (!secret) {
+            throw new InternalServerErrorException("JWT_SECRET is not configured");
+        }
     }
     async register(name, email, password) {
         const existing = await this.prisma.user.findUnique({ where: { email } });
@@ -34,7 +38,7 @@ let AuthService = class AuthService {
             },
             include: { profile: true },
         });
-        return this.issueTokens(user.id, user.email);
+        return this.issueAccessToken(user.id, user.email);
     }
     async login(email, password) {
         const user = await this.prisma.user.findUnique({ where: { email } });
@@ -43,25 +47,15 @@ let AuthService = class AuthService {
         const ok = await argon2.verify(user.passwordHash, password);
         if (!ok)
             throw new UnauthorizedException("Credenciais inválidas");
-        return this.issueTokens(user.id, user.email);
+        return this.issueAccessToken(user.id, user.email);
     }
-    async refresh(userId) {
-        const user = await this.prisma.user.findUnique({ where: { id: userId } });
-        if (!user)
-            throw new UnauthorizedException();
-        return this.issueTokens(user.id, user.email);
-    }
-    issueTokens(userId, email) {
+    issueAccessToken(userId, email) {
         const payload = { sub: userId, email };
         const accessToken = this.jwt.sign(payload, {
             secret: this.config.get("JWT_SECRET"),
             expiresIn: "15m",
         });
-        const refreshToken = this.jwt.sign(payload, {
-            secret: this.config.get("JWT_REFRESH_SECRET"),
-            expiresIn: "7d",
-        });
-        return { accessToken, refreshToken, userId, email };
+        return { accessToken, user: { id: userId, email } };
     }
 };
 AuthService = __decorate([

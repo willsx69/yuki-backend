@@ -6,19 +6,18 @@ export declare class AuthController {
     constructor(auth: AuthService);
     register(dto: RegisterDto): Promise<{
         accessToken: string;
-        refreshToken: string;
-        userId: string;
-        email: string;
+        user: {
+            id: string;
+            email: string;
+        };
     }>;
     login(dto: LoginDto): Promise<{
         accessToken: string;
-        refreshToken: string;
-        userId: string;
-        email: string;
+        user: {
+            id: string;
+            email: string;
+        };
     }>;
-    refresh(token: string): {
-        ok: boolean;
-    };
     me(req: any): {
         userId: any;
         email: any;

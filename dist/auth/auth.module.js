@@ -11,6 +11,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { AuthService } from "./auth.service.js";
 import { AuthController } from "./auth.controller.js";
 import { JwtStrategy } from "./jwt.strategy.js";
+import { JwtAuthGuard } from "./jwt-auth.guard.js";
 import { PrismaModule } from "../prisma/prisma.module.js";
 let AuthModule = class AuthModule {
 };
@@ -30,7 +31,7 @@ AuthModule = __decorate([
         ],
         controllers: [AuthController],
         providers: [AuthService, JwtStrategy],
-        exports: [AuthService],
+        exports: [AuthService, JwtAuthGuard],
     })
 ], AuthModule);
 export { AuthModule };

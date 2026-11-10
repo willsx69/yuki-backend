@@ -7,7 +7,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-import { IsIn, IsInt, IsOptional, IsString, Min } from "class-validator";
+import { IsEnum, IsInt, IsOptional, IsString, Min } from "class-validator";
+import { PaymentMethod } from "@prisma/client";
 export class CreateTransactionDto {
     type;
     amountCents;
@@ -16,10 +17,11 @@ export class CreateTransactionDto {
     date;
     accountId;
     paymentMethodId;
+    creditCardId;
     notes;
 }
 __decorate([
-    IsIn(["income", "expense"]),
+    IsEnum(["income", "expense"]),
     __metadata("design:type", String)
 ], CreateTransactionDto.prototype, "type", void 0);
 __decorate([
@@ -40,13 +42,19 @@ __decorate([
     __metadata("design:type", String)
 ], CreateTransactionDto.prototype, "date", void 0);
 __decorate([
+    IsOptional(),
     IsString(),
     __metadata("design:type", String)
 ], CreateTransactionDto.prototype, "accountId", void 0);
 __decorate([
-    IsString(),
+    IsEnum(PaymentMethod),
     __metadata("design:type", String)
 ], CreateTransactionDto.prototype, "paymentMethodId", void 0);
+__decorate([
+    IsOptional(),
+    IsString(),
+    __metadata("design:type", String)
+], CreateTransactionDto.prototype, "creditCardId", void 0);
 __decorate([
     IsOptional(),
     IsString(),

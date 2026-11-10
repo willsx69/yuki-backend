@@ -1,9 +1,12 @@
-import { Module } from '@nestjs/common';
-import { DebtsController } from './debts.controller.js';
-import { DebtsService } from './debts.service.js';
+import { Module } from "@nestjs/common";
+import { AuthModule } from "../auth/auth.module.js";
+import { DebtsController, InstallmentsController } from "./debts.controller.js";
+import { DebtsService } from "./debts.service.js";
 
 @Module({
-  controllers: [DebtsController],
-  providers: [DebtsService]
+  imports: [AuthModule],
+  controllers: [DebtsController, InstallmentsController],
+  providers: [DebtsService],
+  exports: [DebtsService],
 })
 export class DebtsModule {}

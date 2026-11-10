@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException } from "@nestjs/common";
+import { Injectable, UnauthorizedException, ConflictException, InternalServerErrorException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import * as argon2 from "argon2";
@@ -10,7 +10,12 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private config: ConfigService,
-  ) {}
+  ) {
+    const secret = this.config.get<string>("JWT_SECRET");
+    if (!secret) {
+      throw new InternalServerErrorException("JWT_SECRET is not configured");
+    }
+  }
 
   async register(name: string, email: string, password: string) {
     const existing = await this.prisma.user.findUnique({ where: { email } });
@@ -26,7 +31,7 @@ export class AuthService {
       include: { profile: true },
     });
 
-    return this.issueTokens(user.id, user.email);
+    return this.issueAccessToken(user.id, user.email);
   }
 
   async login(email: string, password: string) {
@@ -34,25 +39,15 @@ export class AuthService {
     if (!user) throw new UnauthorizedException("Credenciais inválidas");
     const ok = await argon2.verify(user.passwordHash, password);
     if (!ok) throw new UnauthorizedException("Credenciais inválidas");
-    return this.issueTokens(user.id, user.email);
+    return this.issueAccessToken(user.id, user.email);
   }
 
-  async refresh(userId: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new UnauthorizedException();
-    return this.issueTokens(user.id, user.email);
-  }
-
-  private issueTokens(userId: string, email: string) {
+  private issueAccessToken(userId: string, email: string) {
     const payload = { sub: userId, email };
     const accessToken = this.jwt.sign(payload, {
-      secret: this.config.get("JWT_SECRET"),
+      secret: this.config.get<string>("JWT_SECRET"),
       expiresIn: "15m",
     });
-    const refreshToken = this.jwt.sign(payload, {
-      secret: this.config.get("JWT_REFRESH_SECRET"),
-      expiresIn: "7d",
-    });
-    return { accessToken, refreshToken, userId, email };
+    return { accessToken, user: { id: userId, email } };
   }
 }

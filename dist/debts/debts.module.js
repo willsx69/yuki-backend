@@ -4,15 +4,18 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-import { Module } from '@nestjs/common';
-import { DebtsController } from './debts.controller.js';
-import { DebtsService } from './debts.service.js';
+import { Module } from "@nestjs/common";
+import { AuthModule } from "../auth/auth.module.js";
+import { DebtsController, InstallmentsController } from "./debts.controller.js";
+import { DebtsService } from "./debts.service.js";
 let DebtsModule = class DebtsModule {
 };
 DebtsModule = __decorate([
     Module({
-        controllers: [DebtsController],
-        providers: [DebtsService]
+        imports: [AuthModule],
+        controllers: [DebtsController, InstallmentsController],
+        providers: [DebtsService],
+        exports: [DebtsService],
     })
 ], DebtsModule);
 export { DebtsModule };

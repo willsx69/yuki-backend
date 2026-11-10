@@ -12,6 +12,20 @@ enum TransactionType {
   expense
 }
 
+enum TransactionKind {
+  normal
+  invoice_payment
+  bill_payment
+  adjustment
+}
+
+enum TransactionStatus {
+  pending
+  posted
+  cancelled
+  reversed
+}
+
 enum BillType {
   payable
   receivable
@@ -34,6 +48,30 @@ enum ProfileTheme {
   system
 }
 
+enum AccountType {
+  checking
+  savings
+  cash
+  digital_wallet
+}
+
+enum PaymentMethod {
+  pix
+  cash
+  debit_card
+  credit_card
+  bank_transfer
+  boleto
+  other
+}
+
+enum InvoiceStatus {
+  open
+  closed
+  paid
+  overdue
+}
+
 model User {
   id           String   @id @default(uuid()) @db.Uuid
   email        String   @unique
@@ -46,6 +84,11 @@ model User {
   transactions Transaction[]
   debts        Debt[]
   bills        Bill[]
+  accounts            Account[]
+  creditCards         CreditCard[]
+  creditCardInvoices  CreditCardInvoice[]
+  installments        Installment[]
+  recurrences         Recurrence[]
 
   @@map("users")
 }
@@ -69,10 +112,14 @@ model Category {
   id        String          @id
   label     String
   type      TransactionType
+  icon      String?
+  color     String?
+  isActive  Boolean         @default(true) @map("is_active")
   isCustom  Boolean         @default(false) @map("is_custom")
   userId    String?         @map("user_id") @db.Uuid
   user      User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime        @updatedAt @map("updated_at") @db.Timestamptz
 
   transactions Transaction[]
   bills        Bill[]
@@ -81,18 +128,92 @@ model Category {
   @@map("categories")
 }
 
+model Account {
+  id                  String      @id @default(uuid()) @db.Uuid
+  userId              String      @map("user_id") @db.Uuid
+  user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                String
+  type                AccountType
+  initialBalanceCents Int         @default(0) @map("initial_balance_cents")
+  institution         String?
+  color               String?
+  isActive            Boolean     @default(true) @map("is_active")
+  createdAt           DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+
+  transactions Transaction[]
+  bills        Bill[]
+  debts        Debt[]
+
+  @@index([userId])
+  @@index([userId, isActive])
+  @@map("accounts")
+}
+
+model CreditCard {
+  id                String    @id @default(uuid()) @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name              String
+  brand             String?
+  lastFourDigits    String?   @map("last_four_digits")
+  creditLimitCents  Int       @map("credit_limit_cents")
+  closingDay        Int       @map("closing_day")
+  dueDay            Int       @map("due_day")
+  isActive          Boolean   @default(true) @map("is_active")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  invoices          CreditCardInvoice[]
+  purchases         Transaction[]
+
+  @@index([userId])
+  @@index([userId, isActive])
+  @@map("credit_cards")
+}
+
+model CreditCardInvoice {
+  id            String        @id @default(uuid()) @db.Uuid
+  userId        String        @map("user_id") @db.Uuid
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creditCardId  String        @map("credit_card_id") @db.Uuid
+  creditCard    CreditCard    @relation(fields: [creditCardId], references: [id], onDelete: Cascade)
+  referenceMonth Int           @map("reference_month")
+  referenceYear  Int           @map("reference_year")
+  closingDate   DateTime      @map("closing_date") @db.Date
+  dueDate       DateTime      @map("due_date") @db.Date
+  status        InvoiceStatus @default(open)
+  paidAt        DateTime?     @map("paid_at") @db.Date
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  transactions  Transaction[]
+
+  @@unique([creditCardId, referenceMonth, referenceYear])
+  @@index([userId])
+  @@index([creditCardId, status])
+  @@map("credit_card_invoices")
+}
+
 model Transaction {
   id              String          @id @default(uuid()) @db.Uuid
   userId          String          @map("user_id") @db.Uuid
   user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   type            TransactionType
+  kind            TransactionKind @default(normal)
+  status          TransactionStatus @default(posted)
   amountCents     Int             @map("amount_cents")
   description     String
   categoryId      String          @map("category_id")
   category        Category        @relation(fields: [categoryId], references: [id])
   date            DateTime        @db.Date
-  accountId       String          @map("account_id")
-  paymentMethodId String          @map("payment_method_id")
+  accountId       String?         @map("account_id") @db.Uuid
+  account         Account?        @relation(fields: [accountId], references: [id])
+  paymentMethodId PaymentMethod   @map("payment_method_id")
+  creditCardId    String?         @map("credit_card_id") @db.Uuid
+  creditCard      CreditCard?     @relation(fields: [creditCardId], references: [id])
+  invoiceId       String?         @map("invoice_id") @db.Uuid
+  invoice         CreditCardInvoice? @relation(fields: [invoiceId], references: [id])
   notes           String?
   createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz
   updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamptz
@@ -100,6 +221,9 @@ model Transaction {
   linkedBills Bill[] @relation("LinkedTransaction")
 
   @@index([userId, date(sort: Desc)])
+  @@index([accountId])
+  @@index([creditCardId])
+  @@index([invoiceId])
   @@map("transactions")
 }
 
@@ -117,7 +241,8 @@ model Debt {
   periodicity           String     @default("monthly")
   categoryId            String     @map("category_id")
   category              Category   @relation(fields: [categoryId], references: [id])
-  accountId             String     @map("account_id")
+  accountId             String     @map("account_id") @db.Uuid
+  account               Account    @relation(fields: [accountId], references: [id])
   notes                 String?
   status                DebtStatus @default(active)
   closedAt              DateTime?  @map("closed_at") @db.Date
@@ -125,10 +250,12 @@ model Debt {
   createdAt             DateTime   @default(now()) @map("created_at") @db.Timestamptz
   updatedAt             DateTime   @updatedAt @map("updated_at") @db.Timestamptz
 
-  bills Bill[]
+  bills         Bill[]
+  installments  Installment[]
 
   @@index([userId, status])
   @@index([userId, firstPendingDueDate])
+  @@index([accountId])
   @@map("debts")
 }
 
@@ -141,7 +268,8 @@ model Bill {
   amountCents         Int       @map("amount_cents")
   categoryId          String    @map("category_id")
   category            Category  @relation(fields: [categoryId], references: [id])
-  accountId           String    @map("account_id")
+  accountId           String    @map("account_id") @db.Uuid
+  account             Account   @relation(fields: [accountId], references: [id])
   dueDate             DateTime  @map("due_date") @db.Date
   status              BillStatus @default(pending)
   installmentNumber   Int       @default(1) @map("installment_number")
@@ -159,5 +287,55 @@ model Bill {
   @@index([userId, dueDate])
   @@index([userId, status])
   @@index([debtId])
+  @@index([accountId])
   @@map("bills")
+}
+
+model Installment {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  debtId        String    @map("debt_id") @db.Uuid
+  debt          Debt      @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  number        Int
+  amountCents   Int       @map("amount_cents")
+  dueDate       DateTime  @map("due_date") @db.Date
+  status        String    @default("pending")
+  paidAt        DateTime? @map("paid_at") @db.Date
+  transactionId String?   @map("transaction_id") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([debtId, number])
+  @@index([userId])
+  @@index([debtId])
+  @@map("installments")
+}
+
+enum RecurrenceFrequency {
+  weekly
+  monthly
+  yearly
+}
+
+model Recurrence {
+  id             String              @id @default(uuid()) @db.Uuid
+  userId         String              @map("user_id") @db.Uuid
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  amountCents    Int                 @map("amount_cents")
+  frequency      RecurrenceFrequency
+  startDate      DateTime            @map("start_date") @db.Date
+  endDate        DateTime?           @map("end_date") @db.Date
+  nextOccurrence DateTime            @map("next_occurrence") @db.Date
+  isActive       Boolean             @default(true) @map("is_active")
+  categoryId     String?             @map("category_id")
+  accountId      String?             @map("account_id") @db.Uuid
+  notes          String?
+  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime            @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([userId])
+  @@index([userId, isActive])
+  @@map("recurrences")
 }

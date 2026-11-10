@@ -1,2 +1,126 @@
+import { DebtsService } from "./debts.service.js";
 export declare class DebtsController {
+    private svc;
+    constructor(svc: DebtsService);
+    list(req: any): import("@prisma/client").Prisma.PrismaPromise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string;
+        userId: string;
+        accountId: string;
+        status: import("@prisma/client").$Enums.DebtStatus;
+        categoryId: string;
+        notes: string | null;
+        creditor: string;
+        totalOriginalCents: number | null;
+        installmentCents: number;
+        totalInstallments: number;
+        initialPaidInstallments: number;
+        firstPendingDueDate: Date;
+        periodicity: string;
+        closedAt: Date | null;
+        settledEarly: boolean;
+    }[]>;
+    create(req: any, dto: any): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string;
+        userId: string;
+        accountId: string;
+        status: import("@prisma/client").$Enums.DebtStatus;
+        categoryId: string;
+        notes: string | null;
+        creditor: string;
+        totalOriginalCents: number | null;
+        installmentCents: number;
+        totalInstallments: number;
+        initialPaidInstallments: number;
+        firstPendingDueDate: Date;
+        periodicity: string;
+        closedAt: Date | null;
+        settledEarly: boolean;
+    }>;
+    get(req: any, id: string): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string;
+        userId: string;
+        accountId: string;
+        status: import("@prisma/client").$Enums.DebtStatus;
+        categoryId: string;
+        notes: string | null;
+        creditor: string;
+        totalOriginalCents: number | null;
+        installmentCents: number;
+        totalInstallments: number;
+        initialPaidInstallments: number;
+        firstPendingDueDate: Date;
+        periodicity: string;
+        closedAt: Date | null;
+        settledEarly: boolean;
+    }>;
+    update(req: any, id: string, dto: any): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string;
+        userId: string;
+        accountId: string;
+        status: import("@prisma/client").$Enums.DebtStatus;
+        categoryId: string;
+        notes: string | null;
+        creditor: string;
+        totalOriginalCents: number | null;
+        installmentCents: number;
+        totalInstallments: number;
+        initialPaidInstallments: number;
+        firstPendingDueDate: Date;
+        periodicity: string;
+        closedAt: Date | null;
+        settledEarly: boolean;
+    }>;
+    remove(req: any, id: string): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string;
+        userId: string;
+        accountId: string;
+        status: import("@prisma/client").$Enums.DebtStatus;
+        categoryId: string;
+        notes: string | null;
+        creditor: string;
+        totalOriginalCents: number | null;
+        installmentCents: number;
+        totalInstallments: number;
+        initialPaidInstallments: number;
+        firstPendingDueDate: Date;
+        periodicity: string;
+        closedAt: Date | null;
+        settledEarly: boolean;
+    }>;
+    installments(req: any, id: string): Promise<{
+        number: number;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        userId: string;
+        status: string;
+        amountCents: number;
+        dueDate: Date;
+        paidAt: Date | null;
+        debtId: string;
+        transactionId: string | null;
+    }[]>;
+}
+export declare class InstallmentsController {
+    private svc;
+    constructor(svc: DebtsService);
+    pay(req: any, id: string, dto: any): Promise<{
+        paid: boolean;
+        transactionId: string;
+    }>;
 }

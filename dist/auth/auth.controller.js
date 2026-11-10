@@ -10,7 +10,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Body, Controller, Post, Get, UseGuards, Request } from "@nestjs/common";
+import { Body, Controller, Post, Get, UseGuards, Request, HttpCode } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { AuthService } from "./auth.service.js";
 import { RegisterDto } from "./dto/register.dto.js";
 import { LoginDto } from "./dto/login.dto.js";
@@ -26,15 +27,13 @@ let AuthController = class AuthController {
     login(dto) {
         return this.auth.login(dto.email, dto.password);
     }
-    refresh(token) {
-        return { ok: true };
-    }
     me(req) {
         return { userId: req.user.sub, email: req.user.email };
     }
 };
 __decorate([
     Post("register"),
+    Throttle({ default: { limit: 5, ttl: 60000 } }),
     __param(0, Body()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [RegisterDto]),
@@ -42,18 +41,13 @@ __decorate([
 ], AuthController.prototype, "register", null);
 __decorate([
     Post("login"),
+    HttpCode(200),
+    Throttle({ default: { limit: 5, ttl: 60000 } }),
     __param(0, Body()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [LoginDto]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "login", null);
-__decorate([
-    Post("refresh"),
-    __param(0, Body("refreshToken")),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
-], AuthController.prototype, "refresh", null);
 __decorate([
     Get("me"),
     UseGuards(JwtAuthGuard),

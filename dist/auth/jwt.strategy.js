@@ -13,10 +13,14 @@ import { ExtractJwt, Strategy } from "passport-jwt";
 import { ConfigService } from "@nestjs/config";
 let JwtStrategy = class JwtStrategy extends PassportStrategy(Strategy) {
     constructor(config) {
+        const secret = config.get("JWT_SECRET");
+        if (!secret) {
+            throw new Error("JWT_SECRET is not configured");
+        }
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
-            secretOrKey: config.get("JWT_SECRET"),
+            secretOrKey: secret,
         });
     }
     async validate(payload) {

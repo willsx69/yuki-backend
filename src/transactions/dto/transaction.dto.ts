@@ -1,7 +1,8 @@
-import { IsIn, IsInt, IsOptional, IsString, Min } from "class-validator";
+import { IsEnum, IsInt, IsOptional, IsString, Min } from "class-validator";
+import { PaymentMethod } from "@prisma/client";
 
 export class CreateTransactionDto {
-  @IsIn(["income", "expense"])
+  @IsEnum(["income", "expense"])
   type: string;
 
   @IsInt()
@@ -17,11 +18,16 @@ export class CreateTransactionDto {
   @IsString()
   date: string;
 
+  @IsOptional()
   @IsString()
-  accountId: string;
+  accountId?: string;
 
+  @IsEnum(PaymentMethod)
+  paymentMethodId: PaymentMethod;
+
+  @IsOptional()
   @IsString()
-  paymentMethodId: string;
+  creditCardId?: string;
 
   @IsOptional()
   @IsString()
