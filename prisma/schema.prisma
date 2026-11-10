@@ -1,0 +1,163 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TransactionType {
+  income
+  expense
+}
+
+enum BillType {
+  payable
+  receivable
+}
+
+enum BillStatus {
+  pending
+  paid
+}
+
+enum DebtStatus {
+  active
+  settled
+  cancelled
+}
+
+enum ProfileTheme {
+  light
+  dark
+  system
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  profile      Profile?
+  categories   Category[]
+  transactions Transaction[]
+  debts        Debt[]
+  bills        Bill[]
+
+  @@map("users")
+}
+
+model Profile {
+  id                 String       @id @db.Uuid
+  user               User         @relation(fields: [id], references: [id], onDelete: Cascade)
+  displayName        String       @default("Usuário") @map("display_name")
+  avatarUrl          String?      @map("avatar_url")
+  currency           String       @default("BRL")
+  language           String       @default("pt-BR")
+  theme              ProfileTheme @default(system)
+  onboardingCompleted Boolean     @default(false) @map("onboarding_completed")
+  createdAt          DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("profiles")
+}
+
+model Category {
+  id        String          @id
+  label     String
+  type      TransactionType
+  isCustom  Boolean         @default(false) @map("is_custom")
+  userId    String?         @map("user_id") @db.Uuid
+  user      User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz
+
+  transactions Transaction[]
+  bills        Bill[]
+  debts        Debt[]
+
+  @@map("categories")
+}
+
+model Transaction {
+  id              String          @id @default(uuid()) @db.Uuid
+  userId          String          @map("user_id") @db.Uuid
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type            TransactionType
+  amountCents     Int             @map("amount_cents")
+  description     String
+  categoryId      String          @map("category_id")
+  category        Category        @relation(fields: [categoryId], references: [id])
+  date            DateTime        @db.Date
+  accountId       String          @map("account_id")
+  paymentMethodId String          @map("payment_method_id")
+  notes           String?
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamptz
+
+  linkedBills Bill[] @relation("LinkedTransaction")
+
+  @@index([userId, date(sort: Desc)])
+  @@map("transactions")
+}
+
+model Debt {
+  id                    String     @id @default(uuid()) @db.Uuid
+  userId                String     @map("user_id") @db.Uuid
+  user                  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                  String
+  creditor              String
+  totalOriginalCents    Int?       @map("total_original_cents")
+  installmentCents      Int        @map("installment_cents")
+  totalInstallments     Int        @map("total_installments")
+  initialPaidInstallments Int      @default(0) @map("initial_paid_installments")
+  firstPendingDueDate   DateTime   @map("first_pending_due_date") @db.Date
+  periodicity           String     @default("monthly")
+  categoryId            String     @map("category_id")
+  category              Category   @relation(fields: [categoryId], references: [id])
+  accountId             String     @map("account_id")
+  notes                 String?
+  status                DebtStatus @default(active)
+  closedAt              DateTime?  @map("closed_at") @db.Date
+  settledEarly          Boolean    @default(false) @map("settled_early")
+  createdAt             DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+
+  bills Bill[]
+
+  @@index([userId, status])
+  @@index([userId, firstPendingDueDate])
+  @@map("debts")
+}
+
+model Bill {
+  id                  String    @id @default(uuid()) @db.Uuid
+  userId              String    @map("user_id") @db.Uuid
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type                BillType
+  description         String
+  amountCents         Int       @map("amount_cents")
+  categoryId          String    @map("category_id")
+  category            Category  @relation(fields: [categoryId], references: [id])
+  accountId           String    @map("account_id")
+  dueDate             DateTime  @map("due_date") @db.Date
+  status              BillStatus @default(pending)
+  installmentNumber   Int       @default(1) @map("installment_number")
+  totalInstallments   Int       @default(1) @map("total_installments")
+  billGroupId         String?   @map("bill_group_id") @db.Uuid
+  debtId              String?   @map("debt_id") @db.Uuid
+  debt                Debt?     @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  notes               String?
+  paidAt              DateTime? @map("paid_at") @db.Date
+  linkedTransactionId String?   @map("linked_transaction_id") @db.Uuid
+  linkedTransaction   Transaction? @relation("LinkedTransaction", fields: [linkedTransactionId], references: [id], onDelete: SetNull)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([userId, dueDate])
+  @@index([userId, status])
+  @@index([debtId])
+  @@map("bills")
+}
